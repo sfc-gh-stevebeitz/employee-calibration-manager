@@ -883,6 +883,11 @@
                 return `Q${quarterNum - 1}-${year}`;
             }
         }
+        
+        function getFiscalYearFromQuarterKey(quarterKey) {
+            const [_, year] = quarterKey.split('-');
+            return parseInt(year) + 1; // Feb-Jan fiscal year
+        }
 
         function initializeQuarterlyData(employee) {
             if (!employee.quarterlyPerformance) {
@@ -941,8 +946,22 @@
         function buildQuarterOptions() {
             const quarterSelect = document.getElementById('quarter-select');
             if (!quarterSelect) return;
-            const quarters = generateQuarterSequence(currentQuarter, 6, 2);
-            quarterSelect.innerHTML = quarters.map(q => {
+            // Restrict to the four quarters of the current fiscal year only
+            const currentFY = getFiscalYearFromQuarterKey(currentQuarter);
+            const baseYear = currentFY - 1; // Q1..Q4 keys use the calendar year of Feb-Nov
+            const allowed = [
+                `Q1-${baseYear}`,
+                `Q2-${baseYear}`,
+                `Q3-${baseYear}`,
+                `Q4-${baseYear}`
+            ];
+
+            // Ensure selectedQuarter is within allowed quarters
+            if (!allowed.includes(selectedQuarter)) {
+                selectedQuarter = allowed.includes(currentQuarter) ? currentQuarter : allowed[0];
+            }
+
+            quarterSelect.innerHTML = allowed.map(q => {
                 const label = getQuarterLabel(q);
                 const currentMark = (q === currentQuarter) ? ' - Current' : '';
                 return `<option value="${q}" ${q === selectedQuarter ? 'selected' : ''}>${label}${currentMark}</option>`;
