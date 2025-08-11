@@ -46,6 +46,119 @@
             font-size: 1.1em;
         }
 
+        .quarter-selector {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .quarter-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .quarter-badge {
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .quarter-select {
+            padding: 8px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            background: white;
+            cursor: pointer;
+        }
+
+        .quarter-select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .quarterly-progress {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .progress-header {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .quarterly-comparison {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .quarter-card {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .quarter-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        .rating-trend {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+
+        .trend-arrow {
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+
+        .trend-up { color: #28a745; }
+        .trend-down { color: #dc3545; }
+        .trend-same { color: #6c757d; }
+
+        .focus-recommendations {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .recommendation-item {
+            background: white;
+            border-left: 4px solid #2196f3;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .priority-high { border-left-color: #f44336; }
+        .priority-medium { border-left-color: #ff9800; }
+        .priority-low { border-left-color: #4caf50; }
+
         .main-nav {
             display: flex;
             justify-content: center;
@@ -431,6 +544,24 @@
             <p>Streamline your 1:1 notes, performance tracking, and employee development</p>
         </header>
 
+        <div class="quarter-selector">
+            <div class="quarter-info">
+                <div class="quarter-badge" id="current-quarter">Q3 FY2025</div>
+                <div>
+                    <label for="quarter-select">View Quarter:</label>
+                    <select id="quarter-select" class="quarter-select" onchange="changeQuarter()">
+                        <option value="Q2-2024">Q2 FY2025 (May-Jul 2024)</option>
+                        <option value="Q3-2024" selected>Q3 FY2025 (Aug-Oct 2024) - Current</option>
+                        <option value="Q4-2024">Q4 FY2025 (Nov 2024-Jan 2025)</option>
+                        <option value="Q1-2025">Q1 FY2026 (Feb-Apr 2025)</option>
+                    </select>
+                </div>
+            </div>
+            <div style="font-size: 0.9em; color: #666;">
+                Fiscal Year: February - January
+            </div>
+        </div>
+
         <nav class="main-nav">
             <button class="nav-btn active" onclick="showSection('employees')">Employees</button>
             <button class="nav-btn" onclick="showSection('add-employee')">Add Employee</button>
@@ -526,6 +657,24 @@
             <!-- Performance Tab -->
             <div id="performance-tab" class="tab-content">
                 <h3>Performance Dimensions</h3>
+                
+                <!-- Quarterly Progress Section -->
+                <div class="quarterly-progress">
+                    <div class="progress-header">Quarterly Performance Tracking</div>
+                    <div class="quarterly-comparison" id="quarterly-comparison">
+                        <!-- Quarterly comparison will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Focus Recommendations -->
+                <div class="focus-recommendations" id="focus-recommendations">
+                    <div class="progress-header">Q3 Focus Recommendations</div>
+                    <div id="recommendations-list">
+                        <!-- Recommendations will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <h4 style="margin-top: 20px;">Current Quarter Ratings</h4>
                 <div class="performance-dimensions">
                     <div class="dimension-card">
                         <div class="dimension-title">Domain Expertise</div>
@@ -671,6 +820,71 @@
         // Global state management
         let employees = JSON.parse(localStorage.getItem('employees') || '[]');
         let currentEmployeeId = null;
+        let currentQuarter = getCurrentQuarter();
+        let selectedQuarter = currentQuarter;
+
+        // Fiscal year functions (February start)
+        function getCurrentQuarter() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth() + 1; // JavaScript months are 0-indexed
+            
+            if (month >= 2 && month <= 4) {
+                return `Q1-${year}`; // Feb-Apr
+            } else if (month >= 5 && month <= 7) {
+                return `Q2-${year}`; // May-Jul
+            } else if (month >= 8 && month <= 10) {
+                return `Q3-${year}`; // Aug-Oct
+            } else {
+                // Nov-Jan (Q4 spans two calendar years)
+                return month >= 11 ? `Q4-${year}` : `Q4-${year - 1}`;
+            }
+        }
+
+        function getQuarterLabel(quarterKey) {
+            const [quarter, year] = quarterKey.split('-');
+            const fiscalYear = quarter === 'Q4' ? parseInt(year) + 1 : parseInt(year) + 1;
+            
+            const quarterMap = {
+                'Q1': `Q1 FY${fiscalYear} (Feb-Apr ${year})`,
+                'Q2': `Q2 FY${fiscalYear} (May-Jul ${year})`,
+                'Q3': `Q3 FY${fiscalYear} (Aug-Oct ${year})`,
+                'Q4': `Q4 FY${fiscalYear} (Nov ${year}-Jan ${parseInt(year) + 1})`
+            };
+            
+            return quarterMap[quarter] || quarterKey;
+        }
+
+        function getPreviousQuarter(quarterKey) {
+            const [quarter, year] = quarterKey.split('-');
+            const quarterNum = parseInt(quarter.substring(1));
+            
+            if (quarterNum === 1) {
+                return `Q4-${parseInt(year) - 1}`;
+            } else {
+                return `Q${quarterNum - 1}-${year}`;
+            }
+        }
+
+        function initializeQuarterlyData(employee) {
+            if (!employee.quarterlyPerformance) {
+                employee.quarterlyPerformance = {};
+            }
+            
+            if (!employee.quarterlyPerformance[selectedQuarter]) {
+                employee.quarterlyPerformance[selectedQuarter] = {
+                    domain: employee.performance?.domain || 'Meets',
+                    business: employee.performance?.business || 'Meets',
+                    customer: employee.performance?.customer || 'Meets',
+                    community: employee.performance?.community || 'Meets',
+                    sales: employee.performance?.sales || 'Meets',
+                    notes: [],
+                    goals: '',
+                    focusAreas: [],
+                    achievements: []
+                };
+            }
+        }
 
         // Performance dimensions
         const performanceDimensions = {
@@ -681,11 +895,51 @@
             sales: 'Partner with Sales'
         };
 
+        // Rating values for calculations
+        const ratingValues = { 'Below': 1, 'Growth': 2, 'Meets': 3, 'Exceeds': 4 };
+        const ratingLabels = { 1: 'Below', 2: 'Growth', 3: 'Meets', 4: 'Exceeds' };
+
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
+            updateQuarterDisplay();
             loadEmployees();
             setupEventListeners();
         });
+
+        function updateQuarterDisplay() {
+            const currentQuarterBadge = document.getElementById('current-quarter');
+            const quarterSelect = document.getElementById('quarter-select');
+            
+            // Update current quarter badge
+            currentQuarterBadge.textContent = getQuarterLabel(currentQuarter).split(' (')[0];
+            
+            // Set selected quarter in dropdown
+            quarterSelect.value = selectedQuarter;
+        }
+
+        function changeQuarter() {
+            selectedQuarter = document.getElementById('quarter-select').value;
+            
+            // Refresh employee data if modal is open
+            if (currentEmployeeId) {
+                const employee = employees.find(emp => emp.id === currentEmployeeId);
+                if (employee) {
+                    initializeQuarterlyData(employee);
+                    loadPerformanceRatings(employee);
+                    loadQuarterlyComparison(employee);
+                    generateQuarterlyRecommendations(employee);
+                }
+            }
+            
+            // Update the recommendations section title
+            const recTitle = document.querySelector('.focus-recommendations .progress-header');
+            if (recTitle) {
+                const quarter = selectedQuarter.split('-')[0];
+                recTitle.textContent = `${quarter} Focus Recommendations`;
+            }
+            
+            updateQuarterDisplay();
+        }
 
         function setupEventListeners() {
             // Add employee form
@@ -744,6 +998,7 @@
                     community: 'Meets',
                     sales: 'Meets'
                 },
+                quarterlyPerformance: {},
                 notes: [],
                 development: {
                     areas: '',
@@ -754,6 +1009,9 @@
                 },
                 createdAt: new Date().toISOString()
             };
+            
+            // Initialize current quarter data
+            initializeQuarterlyData(employee);
 
             employees.push(employee);
             saveEmployees();
@@ -791,8 +1049,17 @@
         }
 
         function calculateAverageRating(employee) {
-            const ratings = Object.values(employee.performance);
-            const ratingValues = { 'Below': 1, 'Growth': 2, 'Meets': 3, 'Exceeds': 4 };
+            // Use current quarter data if available, otherwise fall back to main performance
+            let ratings;
+            if (employee.quarterlyPerformance && employee.quarterlyPerformance[currentQuarter]) {
+                ratings = Object.values(employee.quarterlyPerformance[currentQuarter])
+                    .filter(rating => typeof rating === 'string' && ratingValues[rating]);
+            } else {
+                ratings = Object.values(employee.performance);
+            }
+            
+            if (ratings.length === 0) return 'Meets';
+            
             const total = ratings.reduce((sum, rating) => sum + ratingValues[rating], 0);
             const average = total / ratings.length;
             
@@ -814,8 +1081,17 @@
             document.getElementById('modal-role').value = employee.role;
             document.getElementById('modal-baseline').value = employee.baseline;
 
+            // Initialize quarterly data
+            initializeQuarterlyData(employee);
+
             // Load performance ratings
             loadPerformanceRatings(employee);
+            
+            // Load quarterly comparison
+            loadQuarterlyComparison(employee);
+            
+            // Generate quarterly recommendations
+            generateQuarterlyRecommendations(employee);
 
             // Load notes
             loadNotes(employee);
@@ -831,8 +1107,13 @@
         }
 
         function loadPerformanceRatings(employee) {
-            Object.keys(employee.performance).forEach(dimension => {
-                const rating = employee.performance[dimension];
+            // Load ratings for selected quarter
+            const quarterData = employee.quarterlyPerformance[selectedQuarter];
+            if (!quarterData) return;
+            
+            Object.keys(quarterData).forEach(dimension => {
+                if (performanceDimensions[dimension]) {
+                    const rating = quarterData[dimension];
                 const buttons = document.querySelectorAll(`[data-dimension="${dimension}"]`);
                 
                 buttons.forEach(btn => {
@@ -841,7 +1122,160 @@
                         btn.classList.add('selected');
                     }
                 });
+                }
             });
+        }
+
+        function loadQuarterlyComparison(employee) {
+            const comparisonDiv = document.getElementById('quarterly-comparison');
+            if (!comparisonDiv) return;
+            
+            const currentQuarterData = employee.quarterlyPerformance[selectedQuarter];
+            const previousQuarter = getPreviousQuarter(selectedQuarter);
+            const previousQuarterData = employee.quarterlyPerformance[previousQuarter];
+            
+            let html = '';
+            
+            // Current Quarter Card
+            html += `
+                <div class="quarter-card">
+                    <div class="quarter-title">${getQuarterLabel(selectedQuarter)}</div>
+                    ${Object.keys(performanceDimensions).map(dimension => {
+                        const rating = currentQuarterData ? currentQuarterData[dimension] : 'Meets';
+                        return `<div class="rating-trend">
+                            <span>${performanceDimensions[dimension]}:</span>
+                            <span class="performance-badge badge-${rating.toLowerCase()}">${rating}</span>
+                        </div>`;
+                    }).join('')}
+                </div>
+            `;
+            
+            // Previous Quarter Comparison (if exists)
+            if (previousQuarterData) {
+                html += `
+                    <div class="quarter-card">
+                        <div class="quarter-title">${getQuarterLabel(previousQuarter)} Comparison</div>
+                        ${Object.keys(performanceDimensions).map(dimension => {
+                            const currentRating = currentQuarterData ? ratingValues[currentQuarterData[dimension]] : 3;
+                            const previousRating = ratingValues[previousQuarterData[dimension]];
+                            const trend = currentRating > previousRating ? 'up' : 
+                                         currentRating < previousRating ? 'down' : 'same';
+                            const trendSymbol = trend === 'up' ? '↗' : trend === 'down' ? '↘' : '→';
+                            
+                            return `<div class="rating-trend">
+                                <span>${performanceDimensions[dimension]}:</span>
+                                <span class="trend-arrow trend-${trend}">${trendSymbol}</span>
+                                <span class="performance-badge badge-${previousQuarterData[dimension].toLowerCase()}">${previousQuarterData[dimension]}</span>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                `;
+            }
+            
+            comparisonDiv.innerHTML = html;
+        }
+
+        function generateQuarterlyRecommendations(employee) {
+            const recommendationsDiv = document.getElementById('recommendations-list');
+            if (!recommendationsDiv) return;
+            
+            const currentQuarterData = employee.quarterlyPerformance[selectedQuarter];
+            const previousQuarter = getPreviousQuarter(selectedQuarter);
+            const previousQuarterData = employee.quarterlyPerformance[previousQuarter];
+            
+            const recommendations = [];
+            
+            if (!currentQuarterData) {
+                recommendations.push({
+                    priority: 'high',
+                    title: 'Set Quarter Goals',
+                    content: 'No performance data found for this quarter. Set initial ratings and goals to track progress.'
+                });
+            } else {
+                // Analyze current performance
+                const lowPerformanceAreas = Object.entries(currentQuarterData)
+                    .filter(([key, rating]) => performanceDimensions[key] && (rating === 'Below' || rating === 'Growth'))
+                    .map(([dimension, rating]) => ({ dimension: performanceDimensions[dimension], rating }));
+                
+                if (lowPerformanceAreas.length > 0) {
+                    recommendations.push({
+                        priority: 'high',
+                        title: 'Priority Development Areas',
+                        content: `Focus on improving: ${lowPerformanceAreas.map(area => area.dimension).join(', ')}. These areas need attention to meet quarterly goals.`
+                    });
+                }
+                
+                // Compare with previous quarter if available
+                if (previousQuarterData) {
+                    const declinedAreas = [];
+                    const improvedAreas = [];
+                    
+                    Object.keys(performanceDimensions).forEach(dimension => {
+                        const currentRating = ratingValues[currentQuarterData[dimension]];
+                        const previousRating = ratingValues[previousQuarterData[dimension]];
+                        
+                        if (currentRating < previousRating) {
+                            declinedAreas.push(performanceDimensions[dimension]);
+                        } else if (currentRating > previousRating) {
+                            improvedAreas.push(performanceDimensions[dimension]);
+                        }
+                    });
+                    
+                    if (declinedAreas.length > 0) {
+                        recommendations.push({
+                            priority: 'high',
+                            title: 'Address Performance Decline',
+                            content: `Performance has declined in: ${declinedAreas.join(', ')}. Investigate root causes and create action plans.`
+                        });
+                    }
+                    
+                    if (improvedAreas.length > 0) {
+                        recommendations.push({
+                            priority: 'low',
+                            title: 'Leverage Strengths',
+                            content: `Strong improvement shown in: ${improvedAreas.join(', ')}. Consider leveraging these strengths for mentoring or stretch assignments.`
+                        });
+                    }
+                }
+                
+                // High performance recommendations
+                const highPerformanceAreas = Object.entries(currentQuarterData)
+                    .filter(([key, rating]) => performanceDimensions[key] && rating === 'Exceeds')
+                    .map(([dimension, _]) => performanceDimensions[dimension]);
+                
+                if (highPerformanceAreas.length > 0) {
+                    recommendations.push({
+                        priority: 'medium',
+                        title: 'Excellence Recognition',
+                        content: `Excellent performance in: ${highPerformanceAreas.join(', ')}. Consider visibility opportunities and increased responsibilities.`
+                    });
+                }
+                
+                // Check for 1:1 note patterns
+                if (employee.notes.length === 0) {
+                    recommendations.push({
+                        priority: 'medium',
+                        title: 'Increase 1:1 Frequency',
+                        content: 'No 1:1 notes recorded. Regular check-ins are crucial for quarterly performance tracking and support.'
+                    });
+                }
+            }
+            
+            // Default recommendation if no specific issues found
+            if (recommendations.length === 0) {
+                recommendations.push({
+                    priority: 'low',
+                    title: 'Maintain Performance',
+                    content: 'Performance is on track. Continue current development activities and explore new growth opportunities.'
+                });
+            }
+            
+            recommendationsDiv.innerHTML = recommendations.map(rec => `
+                <div class="recommendation-item priority-${rec.priority}">
+                    <div class="insight-title">${rec.title}</div>
+                    <div>${rec.content}</div>
+                </div>
+            `).join('');
         }
 
         function selectRating(dimension, rating) {
@@ -856,16 +1290,28 @@
             const employee = employees.find(emp => emp.id === currentEmployeeId);
             if (!employee) return;
 
+            // Initialize quarterly data if not exists
+            initializeQuarterlyData(employee);
+            
+            // Save to quarterly performance data
             Object.keys(performanceDimensions).forEach(dimension => {
                 const selectedBtn = document.querySelector(`[data-dimension="${dimension}"].selected`);
                 if (selectedBtn) {
+                    employee.quarterlyPerformance[selectedQuarter][dimension] = selectedBtn.dataset.rating;
+                    // Also update the main performance object for current quarter
+                    if (selectedQuarter === currentQuarter) {
                     employee.performance[dimension] = selectedBtn.dataset.rating;
+                    }
                 }
             });
+            
+            // Refresh quarterly comparison and recommendations
+            loadQuarterlyComparison(employee);
+            generateQuarterlyRecommendations(employee);
 
             saveEmployees();
             loadEmployees();
-            alert('Performance ratings saved successfully!');
+            alert(`Performance ratings saved for ${getQuarterLabel(selectedQuarter).split(' (')[0]}!`);
         }
 
         function loadNotes(employee) {
@@ -1066,6 +1512,7 @@
                 return;
             }
 
+            // Current quarter performance stats
             const performanceStats = {};
             Object.keys(performanceDimensions).forEach(dimension => {
                 performanceStats[dimension] = {
@@ -1076,14 +1523,46 @@
                 };
             });
 
+            // Quarterly trend analysis
+            const quarterlyTrends = {};
+            const availableQuarters = new Set();
+
             employees.forEach(employee => {
+                // Current quarter stats
                 Object.keys(employee.performance).forEach(dimension => {
                     const rating = employee.performance[dimension];
+                    if (performanceStats[dimension]) {
                     performanceStats[dimension][rating]++;
+                    }
                 });
+                
+                // Collect quarterly data
+                if (employee.quarterlyPerformance) {
+                    Object.keys(employee.quarterlyPerformance).forEach(quarter => {
+                        availableQuarters.add(quarter);
+                        if (!quarterlyTrends[quarter]) {
+                            quarterlyTrends[quarter] = {};
+                            Object.keys(performanceDimensions).forEach(dim => {
+                                quarterlyTrends[quarter][dim] = { Below: 0, Growth: 0, Meets: 0, Exceeds: 0 };
+                            });
+                        }
+                        
+                        Object.keys(performanceDimensions).forEach(dimension => {
+                            const rating = employee.quarterlyPerformance[quarter][dimension];
+                            if (rating && quarterlyTrends[quarter][dimension]) {
+                                quarterlyTrends[quarter][dimension][rating]++;
+                            }
+                        });
+                    });
+                }
             });
 
-            let analyticsHTML = '<div class="performance-dimensions">';
+            let analyticsHTML = `
+                <div class="quarter-selector" style="margin-bottom: 30px;">
+                    <h3>Current Quarter Performance - ${getQuarterLabel(currentQuarter).split(' (')[0]}</h3>
+                </div>
+                <div class="performance-dimensions">
+            `;
             
             Object.entries(performanceStats).forEach(([dimension, stats]) => {
                 analyticsHTML += `
@@ -1109,7 +1588,51 @@
 
             analyticsHTML += '</div>';
 
-            // Add team summary
+            // Quarterly trends section
+            if (availableQuarters.size > 1) {
+                analyticsHTML += `
+                    <div class="insights-panel">
+                        <h3>Quarterly Trends</h3>
+                        <div class="quarterly-comparison">
+                `;
+                
+                const sortedQuarters = Array.from(availableQuarters).sort();
+                sortedQuarters.forEach(quarter => {
+                    const totalEmployees = Object.values(quarterlyTrends[quarter])
+                        .reduce((sum, dimension) => {
+                            return sum + Object.values(dimension).reduce((dimSum, count) => dimSum + count, 0);
+                        }, 0) / Object.keys(performanceDimensions).length;
+                    
+                    if (totalEmployees > 0) {
+                        analyticsHTML += `
+                            <div class="quarter-card">
+                                <div class="quarter-title">${getQuarterLabel(quarter)}</div>
+                                <div style="font-size: 0.9em; color: #666; margin-bottom: 10px;">
+                                    ${Math.round(totalEmployees)} employees tracked
+                                </div>
+                                ${Object.entries(quarterlyTrends[quarter]).map(([dimension, stats]) => {
+                                    const total = Object.values(stats).reduce((sum, count) => sum + count, 0);
+                                    if (total === 0) return '';
+                                    
+                                    const avgRating = Object.entries(stats)
+                                        .reduce((sum, [rating, count]) => sum + (ratingValues[rating] * count), 0) / total;
+                                    
+                                    return `<div style="display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 0.8em;">
+                                        <span>${performanceDimensions[dimension]}:</span>
+                                        <span class="performance-badge badge-${ratingLabels[Math.round(avgRating)].toLowerCase()}">
+                                            ${ratingLabels[Math.round(avgRating)]}
+                                        </span>
+                                    </div>`;
+                                }).join('')}
+                            </div>
+                        `;
+                    }
+                });
+                
+                analyticsHTML += '</div></div>';
+            }
+
+            // Team summary
             const totalNotes = employees.reduce((sum, emp) => sum + emp.notes.length, 0);
             const avgNotesPerEmployee = (totalNotes / employees.length).toFixed(1);
             
@@ -1123,6 +1646,10 @@
                     <div class="insight-item">
                         <div class="insight-title">Total 1:1 Notes</div>
                         <div>${totalNotes} notes (${avgNotesPerEmployee} avg per employee)</div>
+                    </div>
+                    <div class="insight-item">
+                        <div class="insight-title">Quarters Tracked</div>
+                        <div>${availableQuarters.size} quarters with performance data</div>
                     </div>
                 </div>
             `;
