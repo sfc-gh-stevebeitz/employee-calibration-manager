@@ -549,12 +549,7 @@
                 <div class="quarter-badge" id="current-quarter">Q3 FY2025</div>
                 <div>
                     <label for="quarter-select">View Quarter:</label>
-                    <select id="quarter-select" class="quarter-select" onchange="changeQuarter()">
-                        <option value="Q2-2024">Q2 FY2025 (May-Jul 2024)</option>
-                        <option value="Q3-2024" selected>Q3 FY2025 (Aug-Oct 2024) - Current</option>
-                        <option value="Q4-2024">Q4 FY2025 (Nov 2024-Jan 2025)</option>
-                        <option value="Q1-2025">Q1 FY2026 (Feb-Apr 2025)</option>
-                    </select>
+                    <select id="quarter-select" class="quarter-select" onchange="changeQuarter()"></select>
                 </div>
             </div>
             <div style="font-size: 0.9em; color: #666;">
@@ -843,7 +838,7 @@
 
         function getQuarterLabel(quarterKey) {
             const [quarter, year] = quarterKey.split('-');
-            const fiscalYear = quarter === 'Q4' ? parseInt(year) + 1 : parseInt(year) + 1;
+            const fiscalYear = parseInt(year) + 1; // Feb-Jan fiscal year
             
             const quarterMap = {
                 'Q1': `Q1 FY${fiscalYear} (Feb-Apr ${year})`,
@@ -853,6 +848,29 @@
             };
             
             return quarterMap[quarter] || quarterKey;
+        }
+
+        function addQuarters(quarterKey, delta) {
+            const [q, y] = quarterKey.split('-');
+            const qNum = parseInt(q.substring(1));
+            const yearNum = parseInt(y);
+            const index = yearNum * 4 + (qNum - 1) + delta;
+            const newYear = Math.floor(index / 4);
+            const newQNum = (index % 4 + 4) % 4; // handle negatives
+            const normalizedQ = (newQNum + 1);
+            return `Q${normalizedQ}-${newYear}`;
+        }
+
+        function generateQuarterSequence(centerQuarterKey, pastCount = 6, futureCount = 2) {
+            const sequence = [];
+            for (let i = pastCount; i > 0; i--) {
+                sequence.push(addQuarters(centerQuarterKey, -i));
+            }
+            sequence.push(centerQuarterKey);
+            for (let i = 1; i <= futureCount; i++) {
+                sequence.push(addQuarters(centerQuarterKey, i));
+            }
+            return sequence;
         }
 
         function getPreviousQuarter(quarterKey) {
@@ -872,12 +890,14 @@
             }
             
             if (!employee.quarterlyPerformance[selectedQuarter]) {
+                const prev = getPreviousQuarter(selectedQuarter);
+                const source = employee.quarterlyPerformance[prev] || employee.performance || {};
                 employee.quarterlyPerformance[selectedQuarter] = {
-                    domain: employee.performance?.domain || 'Meets',
-                    business: employee.performance?.business || 'Meets',
-                    customer: employee.performance?.customer || 'Meets',
-                    community: employee.performance?.community || 'Meets',
-                    sales: employee.performance?.sales || 'Meets',
+                    domain: source.domain || 'Meets',
+                    business: source.business || 'Meets',
+                    customer: source.customer || 'Meets',
+                    community: source.community || 'Meets',
+                    sales: source.sales || 'Meets',
                     notes: [],
                     goals: '',
                     focusAreas: [],
@@ -901,6 +921,7 @@
 
         // Initialize the application
         document.addEventListener('DOMContentLoaded', function() {
+            buildQuarterOptions();
             updateQuarterDisplay();
             loadEmployees();
             setupEventListeners();
@@ -915,6 +936,17 @@
             
             // Set selected quarter in dropdown
             quarterSelect.value = selectedQuarter;
+        }
+
+        function buildQuarterOptions() {
+            const quarterSelect = document.getElementById('quarter-select');
+            if (!quarterSelect) return;
+            const quarters = generateQuarterSequence(currentQuarter, 6, 2);
+            quarterSelect.innerHTML = quarters.map(q => {
+                const label = getQuarterLabel(q);
+                const currentMark = (q === currentQuarter) ? ' - Current' : '';
+                return `<option value="${q}" ${q === selectedQuarter ? 'selected' : ''}>${label}${currentMark}</option>`;
+            }).join('');
         }
 
         function changeQuarter() {
@@ -938,6 +970,7 @@
                 recTitle.textContent = `${quarter} Focus Recommendations`;
             }
             
+            buildQuarterOptions();
             updateQuarterDisplay();
         }
 
