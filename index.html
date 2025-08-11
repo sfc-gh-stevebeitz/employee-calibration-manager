@@ -889,25 +889,44 @@
             return parseInt(year) + 1; // Feb-Jan fiscal year
         }
 
+        function quarterIndex(quarterKey) {
+            const [q, y] = quarterKey.split('-');
+            return parseInt(y) * 4 + (parseInt(q.substring(1)) - 1);
+        }
+
         function initializeQuarterlyData(employee) {
             if (!employee.quarterlyPerformance) {
                 employee.quarterlyPerformance = {};
             }
             
             if (!employee.quarterlyPerformance[selectedQuarter]) {
+                const selIdx = quarterIndex(selectedQuarter);
+                const curIdx = quarterIndex(currentQuarter);
                 const prev = getPreviousQuarter(selectedQuarter);
-                const source = employee.quarterlyPerformance[prev] || employee.performance || {};
-                employee.quarterlyPerformance[selectedQuarter] = {
-                    domain: source.domain || 'Meets',
-                    business: source.business || 'Meets',
-                    customer: source.customer || 'Meets',
-                    community: source.community || 'Meets',
-                    sales: source.sales || 'Meets',
-                    notes: [],
-                    goals: '',
-                    focusAreas: [],
-                    achievements: []
-                };
+
+                // Only carry forward ratings into current quarter; future/past stay blank unless already set
+                if (selIdx === curIdx) {
+                    const source = employee.quarterlyPerformance[prev] || employee.performance || {};
+                    employee.quarterlyPerformance[selectedQuarter] = {
+                        domain: source.domain || undefined,
+                        business: source.business || undefined,
+                        customer: source.customer || undefined,
+                        community: source.community || undefined,
+                        sales: source.sales || undefined,
+                        notes: [],
+                        goals: '',
+                        focusAreas: [],
+                        achievements: []
+                    };
+                } else {
+                    employee.quarterlyPerformance[selectedQuarter] = {
+                        // leave ratings undefined for blank state
+                        notes: [],
+                        goals: '',
+                        focusAreas: [],
+                        achievements: []
+                    };
+                }
             }
         }
 
@@ -991,6 +1010,8 @@
             
             buildQuarterOptions();
             updateQuarterDisplay();
+            // Refresh team overview list to reflect selected quarter
+            loadEmployees();
         }
 
         function setupEventListeners() {
@@ -1086,13 +1107,13 @@
             }
 
             employeeList.innerHTML = employees.map(employee => {
-                const avgRating = calculateAverageRating(employee);
+                const avgRating = calculateAverageRating(employee, selectedQuarter);
                 return `
                     <div class="employee-card" onclick="openEmployeeModal('${employee.id}')">
                         <div class="employee-name">${employee.name}</div>
                         <div class="employee-role">${employee.role}</div>
                         <div class="performance-overview">
-                            <span class="performance-badge badge-${avgRating.toLowerCase()}">${avgRating}</span>
+                            <span class="performance-badge badge-${avgRating ? avgRating.toLowerCase() : 'growth'}">${avgRating || 'Unrated'}</span>
                             <span style="font-size: 0.9em; color: #666;">${employee.notes.length} notes</span>
                         </div>
                     </div>
@@ -1100,17 +1121,17 @@
             }).join('');
         }
 
-        function calculateAverageRating(employee) {
-            // Use current quarter data if available, otherwise fall back to main performance
-            let ratings;
-            if (employee.quarterlyPerformance && employee.quarterlyPerformance[currentQuarter]) {
-                ratings = Object.values(employee.quarterlyPerformance[currentQuarter])
-                    .filter(rating => typeof rating === 'string' && ratingValues[rating]);
-            } else {
-                ratings = Object.values(employee.performance);
+        function calculateAverageRating(employee, quarterKey) {
+            // Use selected quarter data if available; otherwise fall back to main performance
+            let ratings = [];
+            if (employee.quarterlyPerformance && employee.quarterlyPerformance[quarterKey]) {
+                ratings = Object.values(employee.quarterlyPerformance[quarterKey])
+                    .filter(r => typeof r === 'string' && ratingValues[r]);
             }
-            
-            if (ratings.length === 0) return 'Meets';
+            if (ratings.length === 0 && employee.performance) {
+                ratings = Object.values(employee.performance).filter(r => ratingValues[r]);
+            }
+            if (ratings.length === 0) return undefined;
             
             const total = ratings.reduce((sum, rating) => sum + ratingValues[rating], 0);
             const average = total / ratings.length;
@@ -1193,10 +1214,8 @@
                 <div class="quarter-card">
                     <div class="quarter-title">${getQuarterLabel(selectedQuarter)}</div>
                     ${Object.keys(performanceDimensions).map(dimension => {
-                        const rating = currentQuarterData ? currentQuarterData[dimension] : 'Meets';
-                        return `<div class="rating-trend">
-                            <span>${performanceDimensions[dimension]}:</span>
-                            <span class="performance-badge badge-${rating.toLowerCase()}">${rating}</span>
+                        const rating = currentQuarterData ? currentQuarterData[dimension] : undefined;
+                        return `<div class=\"rating-trend\">\n                            <span>${performanceDimensions[dimension]}:</span>\n                            ${rating ? `<span class=\\"performance-badge badge-${rating.toLowerCase()}\\">${rating}</span>` : '<span style=\\"color:#999;\\">Unrated</span>'}
                         </div>`;
                     }).join('')}
                 </div>
@@ -1208,16 +1227,15 @@
                     <div class="quarter-card">
                         <div class="quarter-title">${getQuarterLabel(previousQuarter)} Comparison</div>
                         ${Object.keys(performanceDimensions).map(dimension => {
-                            const currentRating = currentQuarterData ? ratingValues[currentQuarterData[dimension]] : 3;
-                            const previousRating = ratingValues[previousQuarterData[dimension]];
-                            const trend = currentRating > previousRating ? 'up' : 
-                                         currentRating < previousRating ? 'down' : 'same';
+                            const currentRating = currentQuarterData && currentQuarterData[dimension] ? ratingValues[currentQuarterData[dimension]] : 0;
+                            const previousRating = previousQuarterData && previousQuarterData[dimension] ? ratingValues[previousQuarterData[dimension]] : 0;
+                            const trend = currentRating > previousRating ? 'up' : currentRating < previousRating ? 'down' : 'same';
                             const trendSymbol = trend === 'up' ? '↗' : trend === 'down' ? '↘' : '→';
                             
                             return `<div class="rating-trend">
                                 <span>${performanceDimensions[dimension]}:</span>
                                 <span class="trend-arrow trend-${trend}">${trendSymbol}</span>
-                                <span class="performance-badge badge-${previousQuarterData[dimension].toLowerCase()}">${previousQuarterData[dimension]}</span>
+                                ${previousQuarterData && previousQuarterData[dimension] ? `<span class=\"performance-badge badge-${previousQuarterData[dimension].toLowerCase()}\">${previousQuarterData[dimension]}</span>` : '<span style=\"color:#999;\">Unrated</span>'}
                             </div>`;
                         }).join('')}
                     </div>
